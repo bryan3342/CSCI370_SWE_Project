@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles/chatBot.css">
+    <title>Document</title>
+</head>
+<body>
+
+    <div id="particles-js"></div>
+
+<div id="application-logo">
+    <img src="images/heart_logo.png" alt="logo" id="logo-image">\
+    <audio loop id="sound" autoplay>
+        <source src="soft-ambient-atmosphere-140132.mp3" type="audio/mp3">
+    </audio>
+</div>
+
+<div class="application__title">
+    <h1>Heart<span id="minnie">Scope</span></h1>
+</div>
+
+<div class="interface__box">
+    <div class="interface__logo">
+        <img src="images/heart_logo.png" alt="logo" id="heart_logo">
+    </div>
+    <div id="chat-container" style="height: 300px; overflow-y: scroll; width: 100%; padding: 10px;">
+        <!-- Chat bubbles will appear here -->
+         
+    </div>
+
+    <div class="search__container">
+        <input type="text" id="textbar" name="text__bar" placeholder="Message Heartscope">
+        <button type="button" id='button' class="text__bar__button">
+            <img src="images/button_arrow.png" id="text__bar__image" class="text__bar__image">
+        </button>
+    </div>
+</div>
+
+
+
+<script src="scripts/app.js"></script>  <!-- This script will handle resizing -->
+<script src="scripts/particles.min.js"></script>
+<script src="scripts/particles-options.js"></script>
+
+</body>
+</html>
