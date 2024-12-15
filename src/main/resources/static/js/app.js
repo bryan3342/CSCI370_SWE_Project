@@ -62,51 +62,21 @@ function setupIdleTimer(chatBotUI) {
     document.addEventListener("mousemove", resetIdleTimer);
 }
 
-function updateDivWithStrings() {
-    const strings = [
-        "1) What is your Age? (Enter an integer value)",
-        "2) What is your Sex? (Enter 'M' for Male, 'F' for Female)",
-        "3) Which type of Chest Pain have you been diagnosed with? (ATA, NAP, ASY, TA)",
-        "4) What is your Resting Blood Pressure? (Enter an integer value)",
-        "5) What is your Cholesterol? (Enter an integer value)",
-        "6) Is your Fasting Blood Sugar greater than 120 mg/dl? (Enter 1 if Yes, 0 if No)",
-        "7) What are your Resting Electrocardiogram results? (Normal, ST, LVH)",
-        "8) What is your Max Heart Rate? (Enter an integer value)",
-        "9) Do you experience exercise-induced angina? (Y/N)",
-        "10) What is your Oldpeak value? (Enter a decimal number)",
-        "11) What is your ST Slope on your ECG? (Down, Flat, Up)",
-        "12) Would you say that you are at risk of Heart Disease? (Enter 1 if Yes, 0 if No)"
-    ];
-
-    let currentIndex = 0;
-    const userResponses = [];
-    const chatBotUI = new ChatBotUI();
-    setupIdleTimer(chatBotUI);
-
-    const div = document.getElementById("output__text");
-    const input = document.getElementById("textbar");
-    const mainContainer = document.getElementById("main-container");
-
-    div.textContent = strings[currentIndex];
-
-    input.addEventListener("keypress", function (event) {
-        if (event.key === "Enter") {
-            const userMessage = input.value.trim();
-
-            userResponses.push(userMessage);
-            chatBotUI.createUserData(userMessage);
-
-            if (currentIndex === strings.length - 1) {
-                displayFinalResponses(userResponses, mainContainer, chatBotUI);
-                return;
-            }
-
-            currentIndex++;
-            div.textContent = strings[currentIndex];
-            input.value = '';
-        }
-    });
-}
+// Validation rules for each question
+const validationRules = [
+    input => /^\d+$/.test(input), // Age: Integer only
+    input => /^[mf]$/i.test(input), // Sex: 'M' or 'F'
+    input => /^(ata|nap|asy|ta)$/i.test(input), // Chest Pain: ATA, NAP, ASY, TA
+    input => /^\d+$/.test(input), // Resting BP: Integer
+    input => /^\d+$/.test(input), // Cholesterol: Integer
+    input => /^[01]$/.test(input), // Fasting Sugar: 0 or 1
+    input => /^(normal|st|lvh)$/i.test(input), // ECG Results: Normal, ST, LVH
+    input => /^\d+$/.test(input), // Max Heart Rate: Integer
+    input => /^[yn]$/i.test(input), // Angina: 'Y' or 'N'
+    input => /^\d+(\.\d+)?$/.test(input), // Oldpeak: Decimal number
+    input => /^(down|flat|up)$/i.test(input), // ST Slope: Down, Flat, Up
+    input => /^[01]$/.test(input) // Heart Disease Risk: 0 or 1
+];
 
 function displayFinalResponses(userResponses, container, chatBotUI) {
     container.innerHTML = '';
@@ -146,6 +116,37 @@ function displayFinalResponses(userResponses, container, chatBotUI) {
         .catch(error => console.error("Error fetching response:", error));
 }
 
+// Function to clear user input and restart the process
+function clearUserDataAndRestart(chatBotUI, resetFunction) {
+    chatBotUI.userData.clearHistory();
+    chatBotUI.userInput.storeInput(''); // Clear input
+    resetFunction();
+    console.log("User data cleared due to 25 seconds of inactivity.");
+}
+
+// Idle timer setup
+function setupIdleTimer(chatBotUI, resetFunction) {
+    let idleTimer;
+
+    const resetIdleTimer = () => {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+            clearUserDataAndRestart(chatBotUI, resetFunction);
+        }, 25000); // 25 seconds
+    };
+
+    document.addEventListener("keydown", resetIdleTimer);
+    document.addEventListener("mousemove", resetIdleTimer);
+
+    resetIdleTimer(); // Start the timer initially
+}
+
+// Function to initialize the idle timer in DOMContentLoaded
+function initializeIdleTimer(chatBotUI, resetFunction) {
+    setupIdleTimer(chatBotUI, resetFunction);
+}
+
+
 document.addEventListener("DOMContentLoaded", function () {
     const button = document.getElementById("button");
     const input = document.getElementById("textbar");
@@ -175,9 +176,23 @@ document.addEventListener("DOMContentLoaded", function () {
         input.value = '';
     };
 
+    const resetChat = () => {
+        currentIndex = 0;
+        userResponses.length = 0;
+        updateQuestion();
+        console.log("Chat reset due to inactivity.");
+    };
+
     const submitAnswer = () => {
         const userMessage = input.value.trim();
         if (userMessage === "") return;
+
+        // Validate input
+        if (!validationRules[currentIndex](userMessage)) {
+            alert(`Invalid input. Please try again for: ${questions[currentIndex]}`);
+            input.value = '';
+            return;
+        }
 
         // Store the user input
         userResponses.push(userMessage);
@@ -222,23 +237,19 @@ document.addEventListener("DOMContentLoaded", function () {
     };
 
     const displayPrediction = (prediction) => {
-        // Clear any previous content
         mainContainer.innerHTML = '';
 
-        // Create a div to display the prediction
         const responseDiv = document.createElement("div");
         responseDiv.style.padding = "20px";
-        responseDiv.style.fontSize = "18px";
-        responseDiv.style.lineHeight = "1.6";
+        responseDiv.style.fontSize = "24px";
+        responseDiv.style.lineHeight = "2.4";
         responseDiv.style.backgroundColor = "#f9f9f9";
         responseDiv.style.borderRadius = "8px";
 
-        // Show the prediction result
         responseDiv.innerHTML = `<h2>Prediction</h2><p>${prediction}</p>`;
         mainContainer.appendChild(responseDiv);
     };
 
-    // Event listeners
     input.addEventListener("keypress", function (event) {
         if (event.key === "Enter") {
             event.preventDefault();
@@ -248,6 +259,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
     button.addEventListener("click", submitAnswer);
 
-    // Initial setup: display the first question
-    updateQuestion();
+    // Idle Timer Setup
+    let idleTimer;
+    const resetIdleTimer = () => {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+            resetChat();
+        }, 15000); // 25 seconds
+    };
+
+    document.addEventListener("keydown", resetIdleTimer);
+    document.addEventListener("mousemove", resetIdleTimer);
+    resetIdleTimer(); // Start the idle timer
+
+    updateQuestion(); // Display the first question
 });
