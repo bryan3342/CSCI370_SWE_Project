@@ -4,9 +4,13 @@ package heartscope_final.com.heartscope;
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import org.springframework.stereotype.Component;
+
 /**
  * @author Nicholas Farkash
  */
+
+@Component
 public class FilteredDataset extends ArrayList<UserData> {
 
 	UserData userFilteredAround;

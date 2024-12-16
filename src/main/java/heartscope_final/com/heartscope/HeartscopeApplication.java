@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {"heartscope_final.com"})
 @RestController
 @RequestMapping("/predict")
 public class HeartscopeApplication {

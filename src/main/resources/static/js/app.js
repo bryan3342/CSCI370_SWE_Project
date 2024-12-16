@@ -124,6 +124,34 @@ function clearUserDataAndRestart(chatBotUI, resetFunction) {
     console.log("User data cleared due to 25 seconds of inactivity.");
 }
 
+function displayUserResponsesWithObject(userResponses, prediction) {
+    // Construct a user data object
+    const userDataObject = {
+        age: userResponses[0],
+        sex: userResponses[1],
+        chestPain: userResponses[2],
+        bloodPressure: userResponses[3],
+        cholesterol: userResponses[4],
+        fastingSugar: userResponses[5],
+        electrocardiogram: userResponses[6],
+        maxHeartRate: userResponses[7],
+        angina: userResponses[8],
+        oldPeak: userResponses[9],
+        stSlope: userResponses[10],
+        heartDiseaseRisk: userResponses[11],
+    };
+
+    console.log("User Responses Array: ", userResponses);
+    console.log("User Data Object: ", userDataObject);
+
+    // Display prediction status
+    if (prediction === 1 || prediction.toString() === "1") {
+        console.log("Heart Disease Detected: Yes");
+    } else {
+        console.log("Heart Disease Detected: No");
+    }
+}
+
 // Idle timer setup
 function setupIdleTimer(chatBotUI, resetFunction) {
     let idleTimer;
@@ -183,37 +211,10 @@ document.addEventListener("DOMContentLoaded", function () {
         console.log("Chat reset due to inactivity.");
     };
 
-    const submitAnswer = () => {
-        const userMessage = input.value.trim();
-        if (userMessage === "") return;
-
-        // Validate input
-        if (!validationRules[currentIndex](userMessage)) {
-            alert(`Invalid input. Please try again for: ${questions[currentIndex]}`);
-            input.value = '';
-            return;
-        }
-
-        // Store the user input
-        userResponses.push(userMessage);
-        currentIndex++;
-
-        // If all questions are answered, submit to backend
-        if (currentIndex === questions.length) {
-            submitToBackend(userResponses);
-            return;
-        }
-
-        // Update the question after input
-        updateQuestion();
-    };
-
     const submitToBackend = (responses) => {
         fetch("http://localhost:8080/predict", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 age: responses[0],
                 sex: responses[1],
@@ -230,25 +231,90 @@ document.addEventListener("DOMContentLoaded", function () {
             })
         })
             .then(response => response.json())
-            .then(data => {
-                displayPrediction(data.prediction);
+            .then(predictionData => {
+                console.log("Prediction Data:", predictionData);
+        // Step 1: Send userResponses to backend to convert to UserData
+        fetch("http://localhost:8080/api/convert-user-input", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(responses)
+        })
+            .then(response => response.json())
+            .then(convertedUserData => {
+                console.log("Converted UserData:", convertedUserData);
+    
+                // Step 2: Fetch comparison values
+                fetch("http://localhost:8080/api/comparison-values", {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json" }
+                })
+                    .then(response => response.json())
+                    .then(comparisonData => {
+                        console.log("Comparison Values:", comparisonData);
+    
+                        // Step 3: Display results and prediction
+                        displayFinalResults(responses, convertedUserData, comparisonData);
+                    })
+                    .catch(error => console.error("Error fetching comparison values:", error));
             })
-            .catch(error => console.error("Error submitting data:", error));
+            .catch(error => console.error("Error converting user input:", error));
+        })
     };
-
-    const displayPrediction = (prediction) => {
-        mainContainer.innerHTML = '';
-
+    
+    const displayFinalResults = (prediction, convertedUserData, comparisonValues) => {
+        mainContainer.innerHTML = ''; // Clear the container
+        
         const responseDiv = document.createElement("div");
         responseDiv.style.padding = "20px";
-        responseDiv.style.fontSize = "24px";
-        responseDiv.style.lineHeight = "2.4";
+        responseDiv.style.fontSize = "18px";
+        responseDiv.style.lineHeight = "1.8";
         responseDiv.style.backgroundColor = "#f9f9f9";
         responseDiv.style.borderRadius = "8px";
-
-        responseDiv.innerHTML = `<h2>Prediction</h2><p>${prediction}</p>`;
+        responseDiv.style.fontFamily = "monospace";
+    
+        // Format data as strings
+        const convertedUserDataString = JSON.stringify(convertedUserData);
+        const comparisonValuesString = JSON.stringify(comparisonValues);
+    
+        // Display the data
+        responseDiv.innerHTML = `
+            <h2>Prediction</h2>
+            <p>${prediction === 1 ? "Yes (Heart Disease Detected)" : "No (Heart Disease Not Detected)"}</p>
+            <h3>Processed User Data</h3>
+            <pre style="white-space: pre-wrap;">${convertedUserDataString}</pre>
+            <h3>Comparison Values</h3>
+            <pre style="white-space: pre-wrap;">${comparisonValuesString}</pre>
+        `;
+    
         mainContainer.appendChild(responseDiv);
     };
+    
+    const submitAnswer = () => {
+        const userMessage = input.value.trim();
+        if (userMessage === "") return;
+    
+        // Validate input
+        if (!validationRules[currentIndex](userMessage)) {
+            alert(`Invalid input. Please try again for: ${questions[currentIndex]}`);
+            input.value = '';
+            return;
+        }
+    
+        // Store the user input
+        userResponses.push(userMessage);
+        currentIndex++;
+    
+        // If all questions are answered, submit to backend
+        if (currentIndex === questions.length) {
+            submitToBackend(userResponses);
+            return;
+        }
+    
+        // Update the question after input
+        updateQuestion();
+    };
+    
+    
 
     input.addEventListener("keypress", function (event) {
         if (event.key === "Enter") {
